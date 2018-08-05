@@ -7,16 +7,29 @@ const redisClient = redis.createClient(redisURL)
 
 // Wrapping Redis client.get with util.promisify to return a Promise instead of a callback.
 redisClient.get = util.promisify(redisClient.get)
+redisClient.flushall()
 
 // Store reference to the original exec function.
 const exec = mongoose.Query.prototype.exec
 
+// Create toggleable caching method
+mongoose.Query.prototype.cache = function() {
+  this._cache = true
+  return this
+}
+
 // Monkey patching the Mongoose query exec function to extend it with caching 👍
 mongoose.Query.prototype.exec = async function() {
+  if (!this._cache) {
+    return exec.apply(this, arguments)
+  }
+
   const cacheKey = getJsonStringCacheKey.call(this)
   const cachedValue = await redisClient.get(cacheKey)
 
-  if (cachedValue) return getHydratedMongooseDocs.call(this, cachedValue)
+  if (cachedValue) {
+    return getHydratedMongooseDocs.call(this, cachedValue)
+  }
 
   // If a cached value does not alredy exist, fetch query results from the database and cache it.
   const result = await exec.apply(this, arguments)
