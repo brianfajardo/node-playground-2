@@ -13,5 +13,8 @@ const { clearCache } = require('../services/cache')
 
 module.exports = async (req, res, next) => {
   await next()
-  clearCache(req.user.id)
+
+  if (res.statusCode < 400) {
+    clearCache(req.user.id)
+  }
 }

@@ -5,13 +5,13 @@ const redis = require('redis')
 const redisURL = 'redis://127.0.0.1:6379' // Default URL
 const redisClient = redis.createClient(redisURL)
 
-// Wrapping Redis client.get with util.promisify to return a Promise instead of a callback.
+// Wrapping Redis client.hget with util.promisify to return a Promise instead of a callback.
 redisClient.hget = util.promisify(redisClient.hget)
 
 // Store reference to the original exec function.
 const exec = mongoose.Query.prototype.exec
 
-// Create toggleable caching method
+// Create a chainable and toggleable caching method on the mongoose Query prototype.
 mongoose.Query.prototype.cache = function(options = {}) {
   this._cache = true
 
@@ -26,7 +26,7 @@ mongoose.Query.prototype.cache = function(options = {}) {
 // Monkey patching the Mongoose query exec function to extend it with caching 👍
 mongoose.Query.prototype.exec = async function() {
   if (!this._cache) {
-    console.log('Data retrieved from database')
+    // Invoke the default query exec function without caching
     return exec.apply(this, arguments)
   }
 
