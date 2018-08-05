@@ -2,6 +2,8 @@
     "extends": "airbnb",
     "rules": {
         "indent": 0,
-        "quotes": 0
+        "quotes": 0,
+        "arrow-parens": 0,
+        "semi": 0,
     }
 }
