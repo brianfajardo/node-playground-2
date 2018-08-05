@@ -6,15 +6,20 @@ const redisURL = 'redis://127.0.0.1:6379' // Default URL
 const redisClient = redis.createClient(redisURL)
 
 // Wrapping Redis client.get with util.promisify to return a Promise instead of a callback.
-redisClient.get = util.promisify(redisClient.get)
-redisClient.flushall()
+redisClient.hget = util.promisify(redisClient.hget)
 
 // Store reference to the original exec function.
 const exec = mongoose.Query.prototype.exec
 
 // Create toggleable caching method
-mongoose.Query.prototype.cache = function() {
+mongoose.Query.prototype.cache = function(options = {}) {
   this._cache = true
+
+  if (!options.key) {
+    options.key = 'defaultKey'
+  }
+
+  this._primaryCacheKey = JSON.stringify(options.key)
   return this
 }
 
@@ -24,8 +29,11 @@ mongoose.Query.prototype.exec = async function() {
     return exec.apply(this, arguments)
   }
 
-  const cacheKey = getJsonStringCacheKey.call(this)
-  const cachedValue = await redisClient.get(cacheKey)
+  const secondaryCacheKey = getJsonStringCacheKey.call(this)
+  const cachedValue = await redisClient.hget(
+    this._primaryCacheKey,
+    secondaryCacheKey
+  )
 
   if (cachedValue) {
     return getHydratedMongooseDocs.call(this, cachedValue)
@@ -34,7 +42,7 @@ mongoose.Query.prototype.exec = async function() {
   // If a cached value does not alredy exist, fetch query results from the database and cache it.
   const result = await exec.apply(this, arguments)
 
-  setCache(cacheKey, result)
+  setCache.call(this, secondaryCacheKey, result)
 
   return result
 }
@@ -66,6 +74,12 @@ function getMongooseDocument(cacheModel) {
 }
 
 // Handle setting cache
-function setCache(key, value) {
-  redisClient.set(key, JSON.stringify(value))
+function setCache(secondaryCacheKey, value, expirationSeconds = 10) {
+  redisClient.hset(
+    this._primaryCacheKey,
+    secondaryCacheKey,
+    JSON.stringify(value),
+    'EX',
+    expirationSeconds
+  )
 }
