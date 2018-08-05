@@ -6,9 +6,7 @@ const Blog = mongoose.model('Blog')
 
 // Middleware
 const requireLogin = require('../middlewares/requireLogin')
-
-// Caching
-const { clearHash } = require('../services/cache')
+const clearCache = require('../middlewares/clearCache')
 
 module.exports = app => {
   app.get('/api/blogs/:id', requireLogin, async (req, res) => {
@@ -21,13 +19,16 @@ module.exports = app => {
   })
 
   app.get('/api/blogs', requireLogin, async (req, res) => {
+    // Using the req.user.id property as the primary caching key.
+    // Depending on project, alternative keys might be suited better.
     const blogs = await Blog.find({ _user: req.user.id }).cache({
       key: req.user.id
     })
     res.status(200).send(blogs)
   })
 
-  app.post('/api/blogs', requireLogin, async (req, res) => {
+  app.post('/api/blogs', requireLogin, clearCache, async (req, res) => {
+    console.log('post route')
     const { title, content } = req.body
 
     const blog = new Blog({
@@ -42,7 +43,5 @@ module.exports = app => {
     } catch (err) {
       res.send(400, err)
     }
-
-    clearHash(req.user.id)
   })
 }

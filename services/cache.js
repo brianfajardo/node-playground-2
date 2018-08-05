@@ -7,7 +7,7 @@ const redisClient = redis.createClient(redisURL)
 
 // Wrapping Redis client.get with util.promisify to return a Promise instead of a callback.
 redisClient.hget = util.promisify(redisClient.hget)
-redisClient.flushall()
+
 // Store reference to the original exec function.
 const exec = mongoose.Query.prototype.exec
 
@@ -86,11 +86,12 @@ function setCache(secondaryCacheKey, value, expirationSeconds = 10) {
   )
 }
 
-function clearHash(primaryCacheKey) {
+// In this project, priamryCacheKey is the req.user.id for convenience
+function clearCache(primaryCacheKey) {
   redisClient.del(JSON.stringify(primaryCacheKey))
   console.log(`cleared cache of primaryCacheKey: ${primaryCacheKey}`)
 }
 
 module.exports = {
-  clearHash
+  clearCache
 }
