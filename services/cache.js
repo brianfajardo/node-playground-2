@@ -1,8 +1,8 @@
 const mongoose = require('mongoose')
 const util = require('util')
 const redis = require('redis')
+const { redisURL } = require('../config/keys')
 
-const redisURL = 'redis://127.0.0.1:6379' // Default URL
 const redisClient = redis.createClient(redisURL)
 
 // Wrapping Redis client.hget with util.promisify to return a Promise instead of a callback.

@@ -7,19 +7,26 @@ services:
   - mongodb
   - redis-server
 env:
-  - NODE_ENV=ci
+  # Creates one build where the NODE_ENV and PORT is set.
+  - NODE_ENV=ci PORT=3000
 # After installing node modules we want to cache it, speeding up the build process.
 cache:
   directories:
+    - ~/.npm
+    - ~/.cache
     - node_modules
     - client/node_modules
 install:
+  # Install Node/Express packages
   - npm install
+  # Build front end application
   - npm run build
+  # Use the new "ci" command for fastest installs on CI
+  - npm ci
+before_script:
+  # Run start script and run on the set PORT above.
+  # The '-- --silent' passes arguments to http-server which silences its output
+  # else our travis logs would be cluttered with output from HTTP requests
+  - npm start -- --silent &
 script:
-  # nohup: if the shell is closed, don't kill anything this command creates
-  # &: run this command in a subshell (in the background)
-  - nohup npm run start &
-  # Wait 3 seconds, time for server to start up
-  - sleep 3
-  - npm run test
+  - npm run cypress:run
