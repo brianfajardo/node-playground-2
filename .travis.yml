@@ -1,0 +1,25 @@
+language: node_js
+node_js:
+  - "8"
+# Linux distro build environment
+dist: trusty
+services:
+  - mongodb
+  - redis-server
+env:
+  - NODE_ENV=ci
+# After installing node modules we want to cache it, speeding up the build process.
+cache:
+  directories:
+    - node_modules
+    - client/node_modules
+install:
+  - npm install
+  - npm run build
+script:
+  # nohup: if the shell is closed, don't kill anything this command creates
+  # &: run this command in a subshell (in the background)
+  - nohup npm run start &
+  # Wait 3 seconds, time for server to start up
+  - sleep 3
+  - npm run test
